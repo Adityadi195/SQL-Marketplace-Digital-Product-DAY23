@@ -1,3 +1,7 @@
+-- CREATE DATABASE IF NOT EXISTS marketplace_digital;
+
+-- DROP DATABASE marketplace_digital;
+
 CREATE DATABASE IF NOT EXISTS marketplace_digital;
 USE marketplace_digital;
 
@@ -26,8 +30,14 @@ CREATE TABLE products (
     stock       INT             NOT NULL DEFAULT 0,
     file_url    VARCHAR(500),
     created_at  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_product_seller   FOREIGN KEY (seller_id)   REFERENCES users(id),
-    CONSTRAINT fk_product_category FOREIGN KEY (category_id) REFERENCES product_categories(id)
+
+    CONSTRAINT fk_product_seller
+        FOREIGN KEY (seller_id)
+        REFERENCES users(id),
+
+    CONSTRAINT fk_product_category
+        FOREIGN KEY (category_id)
+        REFERENCES product_categories(id)
 );
 
 CREATE TABLE transactions (
@@ -37,9 +47,46 @@ CREATE TABLE transactions (
     amount           DECIMAL(12, 2) NOT NULL,
     status           ENUM('pending', 'success', 'failed') NOT NULL DEFAULT 'pending',
     transaction_date TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_transaction_buyer   FOREIGN KEY (buyer_id)   REFERENCES users(id),
-    CONSTRAINT fk_transaction_product FOREIGN KEY (product_id) REFERENCES products(id)
+
+    CONSTRAINT fk_transaction_buyer
+        FOREIGN KEY (buyer_id)
+        REFERENCES users(id),
+
+    CONSTRAINT fk_transaction_product
+        FOREIGN KEY (product_id)
+        REFERENCES products(id)
 );
+
+-- Products Table Indexes
+CREATE INDEX idx_products_category
+ON products(category_id);
+
+CREATE INDEX idx_products_seller
+ON products(seller_id);
+
+CREATE INDEX idx_products_price
+ON products(price);
+
+CREATE INDEX idx_products_stock
+ON products(stock);
+
+-- Transactions Table Indexes
+CREATE INDEX idx_transactions_buyer
+ON transactions(buyer_id);
+
+CREATE INDEX idx_transactions_product
+ON transactions(product_id);
+
+CREATE INDEX idx_transactions_date
+ON transactions(transaction_date);
+
+-- Optional Composite Index
+CREATE INDEX idx_transactions_status_date
+ON transactions(status, transaction_date);
+
+-- =========================================================
+-- INSERT DATA
+-- =========================================================
 
 INSERT INTO product_categories (name, description) VALUES
 ('E-book',           'Buku digital dalam format PDF, ePub, atau MOBI'),
@@ -82,12 +129,12 @@ INSERT INTO products (seller_id, category_id, name, description, price, stock, f
 (8,  5, 'Lightroom Preset Cinematic Pack',       '30 preset gaya sinematik untuk foto',         55000.00, 200,'/files/lightroom-cinematic.zip'),
 (8,  6, 'Sound Effect Pack UI/UX',               '100 sound effect untuk aplikasi digital',     45000.00, 500,'/files/sfx-uiux.zip'),
 (10, 7, 'Logo Reveal Animation Template',        'Intro animasi logo format After Effects',     180000.00, 40, '/files/logo-reveal.aep'),
-(10, 3, 'Spring Boot Microservice Template',     'Template microservice dengan Docker Compose',  200000.00, 25, '/files/springboot-micro.zip'),
+(10, 3, 'Spring Boot Microservice Template',     'Template microservice dengan Docker Compose', 200000.00, 25, '/files/springboot-micro.zip'),
 (13, 8, 'Premium Font Bundle — 10 Typeface',     'Koleksi 10 font premium lisensi komersial',   130000.00, 999,'/files/font-bundle-premium.zip'),
 (13, 9, 'Figma Plugin — Auto Layout Helper',     'Plugin mempercepat workflow desain Figma',    600000.00, 0,  '/files/figma-autolayout.zip'),
-(1,  10,'Laporan Keuangan Template Excel',       'Template laporan bulanan dan tahunan',          35000.00, 999,'/files/laporan-keuangan.xlsx'),
-(2,  12,'Low Poly Tree Pack — Blender',           'Aset pohon low poly siap render',             90000.00, 60, '/files/lowpoly-trees.blend'),
-(13, 11,'Modul Belajar SQL dari Nol',             'Materi belajar SQL lengkap dengan latihan',    70000.00, 999,'/files/modul-sql.pdf');
+(1,  10,'Laporan Keuangan Template Excel',       'Template laporan bulanan dan tahunan',         35000.00, 999,'/files/laporan-keuangan.xlsx'),
+(2,  12,'Low Poly Tree Pack — Blender',          'Aset pohon low poly siap render',              90000.00, 60, '/files/lowpoly-trees.blend'),
+(13, 11,'Modul Belajar SQL dari Nol',            'Materi belajar SQL lengkap dengan latihan',    70000.00, 999,'/files/modul-sql.pdf');
 
 INSERT INTO transactions (buyer_id, product_id, amount, status) VALUES
 (4,  1,  150000.00, 'success'),
@@ -106,54 +153,54 @@ INSERT INTO transactions (buyer_id, product_id, amount, status) VALUES
 (14, 12, 600000.00, 'pending'),
 (14, 14,  90000.00, 'success');
 
--- SQL Fundamentals
+-- =========================================================
+-- SELECT
+-- =========================================================
+
 SELECT * FROM products;
 
 -- Tampilkan nama dan harga produk saja
-SELECT name, price
-FROM products;
+SELECT name, price FROM products;
 
 -- Tampilkan produk dengan harga antara 50.000 sampai 200.000.
-SELECT name, price
-FROM products
+SELECT name, price FROM products
 WHERE price BETWEEN 50000 AND 200000;
 
 -- Tampilkan produk yang memiliki stok 0 ATAU harga di atas 500.000.
-SELECT name, price, stock
-FROM products
+SELECT name, price, stock FROM products
 WHERE stock = 0 OR price > 500000;
 
 -- Tampilkan 5 produk dengan harga tertinggi.
-SELECT name, price
-FROM products
-ORDER BY price DESC
-LIMIT 5;
+SELECT name, price FROM products
+ORDER BY price DESC LIMIT 5;
 
+-- =========================================================
+-- AGGREGATE & CONDITIONAL LOGIC
+-- =========================================================
 
--- Aggregate & Conditional Logic 
 -- Hitung total user yang terdaftar.
-SELECT COUNT(*) AS total_user
-FROM users;
+SELECT COUNT(*) AS total_user FROM users;
 
 -- Hitung total produk yang tersedia.
-SELECT COUNT(*) AS total_produk
-FROM products;
+SELECT COUNT(*) AS total_produk FROM products;
 
 -- Hitung jumlah Produk per kategori 
 SELECT
-    pc.name          AS kategori,
-    COUNT(p.id)      AS jumlah_produk
+    pc.name     AS kategori,
+    COUNT(p.id) AS jumlah_produk
 FROM product_categories pc
-LEFT JOIN products p ON p.category_id = pc.id
+LEFT JOIN products p
+    ON p.category_id = pc.id
 GROUP BY pc.id, pc.name
 ORDER BY jumlah_produk DESC;
 
 -- Hitung rata-rata harga produk per kategori.
 SELECT
-    pc.name              AS kategori,
+    pc.name               AS kategori,
     ROUND(AVG(p.price), 2) AS rata_rata_harga
 FROM product_categories pc
-LEFT JOIN products p ON p.category_id = pc.id
+LEFT JOIN products p
+    ON p.category_id = pc.id
 GROUP BY pc.id, pc.name
 ORDER BY rata_rata_harga DESC;
 
@@ -162,50 +209,59 @@ SELECT
     pc.name     AS kategori,
     COUNT(p.id) AS jumlah_produk
 FROM product_categories pc
-JOIN products p ON p.category_id = pc.id
+JOIN products p
+    ON p.category_id = pc.id
 GROUP BY pc.id, pc.name
 HAVING COUNT(p.id) > 3;
 
--- Join Statements
+-- =========================================================
+-- JOIN STATEMENTS
+-- =========================================================
+
 -- Tampilkan daftar produk beserta nama kategorinya.
 SELECT
-    p.name     AS nama_produk,
+    p.name  AS nama_produk,
     p.price,
-    pc.name    AS kategori
+    pc.name AS kategori
 FROM products p
-INNER JOIN product_categories pc ON pc.id = p.category_id;
+INNER JOIN product_categories pc
+    ON pc.id = p.category_id;
 
 -- Tampilkan semua kategori meskipun belum memiliki produk.
 SELECT
-    pc.name           AS kategori,
-    COUNT(p.id)       AS jumlah_produk
+    pc.name     AS kategori,
+    COUNT(p.id) AS jumlah_produk
 FROM product_categories pc
-LEFT JOIN products p ON p.category_id = pc.id
+LEFT JOIN products p
+    ON p.category_id = pc.id
 GROUP BY pc.id, pc.name;
 
 -- Tampilkan semua user meskipun belum pernah membeli produk.
 SELECT
-    u.name                      AS nama_user,
+    u.name      AS nama_user,
     u.role,
-    COUNT(t.id)                 AS total_transaksi
+    COUNT(t.id) AS total_transaksi
 FROM users u
-LEFT JOIN transactions t ON t.buyer_id = u.id
+LEFT JOIN transactions t
+    ON t.buyer_id = u.id
 GROUP BY u.id, u.name, u.role;
 
 -- Tampilkan daftar transaksi beserta nama buyer.
 SELECT
-    t.id                 AS id_transaksi,
-    u.name               AS nama_buyer,
+    t.id               AS id_transaksi,
+    u.name             AS nama_buyer,
     t.amount,
     t.status,
     t.transaction_date
 FROM transactions t
-INNER JOIN users u ON u.id = t.buyer_id;
+INNER JOIN users u
+    ON u.id = t.buyer_id;
 
 -- Tampilkan daftar produk beserta nama user yang mengupload produk tersebut.
 SELECT
-    p.name       AS nama_produk,
+    p.name AS nama_produk,
     p.price,
-    u.name       AS nama_seller
+    u.name AS nama_seller
 FROM products p
-INNER JOIN users u ON u.id = p.seller_id;
+INNER JOIN users u
+    ON u.id = p.seller_id;
